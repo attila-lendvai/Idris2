@@ -151,7 +151,7 @@ int idris_mkdir(char* dname) {
 #ifdef _WIN32
     return mkdir(dname);
 #else
-    return mkdir(dname, S_IRWXU | S_IRGRP | S_IROTH);
+    return mkdir(dname, S_IRWXU | S_IRWXG | S_IRWXO);
 #endif
 }
 
