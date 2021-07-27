@@ -3,6 +3,9 @@
 , chez
 , clang
 , gmp
+, git
+, gnumake
+, nix
 , fetchFromGitHub
 , makeWrapper
 , idris2-version
@@ -21,7 +24,7 @@ stdenv.mkDerivation rec {
   src = ../.;
 
   strictDeps = true;
-  nativeBuildInputs = [ makeWrapper clang chez ]
+  nativeBuildInputs = [ makeWrapper clang chez git gnumake nix ]
     ++ lib.optional stdenv.isDarwin [ zsh ];
   buildInputs = [ chez gmp ];
 
