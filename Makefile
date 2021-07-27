@@ -1,12 +1,14 @@
 include config.mk
 
-# Idris 2 executable used to bootstrap
-export IDRIS2_BOOT ?= idris2
-
 # Idris 2 executable we're building
 NAME = idris2
 TARGETDIR = ${CURDIR}/build/exec
 TARGET = ${TARGETDIR}/${NAME}
+
+# This is only considered when running the tests, because it doesn't
+# make sense to override the Idris binary in the other targets that
+# generate build artifacts.
+IDRIS2 ?= $(realpath $(TARGET))
 
 # Default code generator. This is passed to the libraries for incremental
 # builds, but overridable via environment variables or arguments to make
@@ -33,23 +35,23 @@ IDRIS2_APP_IPKG := idris2.ipkg
 IDRIS2_LIB_IPKG := idris2api.ipkg
 
 ifeq ($(OS), windows)
-	# This produces D:/../.. style paths
-	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
-	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
-	SEP := ;
+    # This produces D:/../.. style paths
+    IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
+    IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
+    SEP := ;
 else
-	IDRIS2_PREFIX := ${PREFIX}
-	IDRIS2_CURDIR := ${CURDIR}
-	SEP := :
+    IDRIS2_PREFIX := ${PREFIX}
+    IDRIS2_CURDIR := ${CURDIR}
+    SEP := :
 endif
 
 TEST_PREFIX ?= ${IDRIS2_CURDIR}/build/env
 
 # Library and data paths for bootstrap-test
-IDRIS2_BOOT_PREFIX := ${IDRIS2_CURDIR}/bootstrap-build
+BOOTSTRAP_IDRIS_PREFIX := ${IDRIS2_CURDIR}/bootstrap-build
 
 # These are the library path in the build dir to be used during build
-export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/test/build/ttc"
+export LOCAL_IDRIS2_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/test/build/ttc"
 
 export SCHEME
 
@@ -61,7 +63,8 @@ all: support ${TARGET} libs
 idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
+	@echo "Building Idris 2 version: $(IDRIS2_VERSION)"
+	${BOOTSTRAP_IDRIS} --build ${IDRIS2_APP_IPKG}
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
@@ -73,28 +76,28 @@ src/IdrisPaths.idr: FORCE
 FORCE:
 
 prelude:
-	${MAKE} -C libs/prelude IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/prelude IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
 
 base: prelude
-	${MAKE} -C libs/base IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
 
 network: prelude
-	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
 
 contrib: base
-	${MAKE} -C libs/contrib IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/contrib IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
 
 test-lib: contrib
-	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
 
 libs : prelude base contrib network test-lib
 
 libdocs:
-	${MAKE} -C libs/prelude docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/base docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/contrib docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/network docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/test docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/prelude docs IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
+	${MAKE} -C libs/base docs    IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
+	${MAKE} -C libs/contrib docs IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
+	${MAKE} -C libs/network docs IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
+	${MAKE} -C libs/test docs    IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH}
 
 
 ifeq ($(OS), windows)
@@ -119,7 +122,7 @@ endif
 
 testenv:
 	@${MAKE} ${TEST_PREFIX}/${NAME_VERSION}
-	@${MAKE} -C tests testbin IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+	@${MAKE} -C tests testbin IDRIS2=$(IDRIS2) IDRIS2_PREFIX=${TEST_PREFIX}
 
 testenv-clean:
 	$(RM) -r ${TEST_PREFIX}/${NAME_VERSION}
@@ -129,15 +132,14 @@ test: testenv
 	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
-	@${MAKE} -C tests only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+	${MAKE} -C tests only=$(only) IDRIS2=$(IDRIS2) IDRIS2_PREFIX=${TEST_PREFIX}
 
 retest: testenv
 	@echo
 	@echo "NOTE: \`${MAKE} retest\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
-	@${MAKE} -C tests retest only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
-
+	@${MAKE} -C tests retest only=$(only) IDRIS2=$(IDRIS2) IDRIS2_PREFIX=${TEST_PREFIX}
 
 test-installed: testenv
 	@${MAKE} -C tests only=$(only) IDRIS2=$(IDRIS2_PREFIX)/bin/idris2 IDRIS2_PREFIX=${IDRIS2_PREFIX}
@@ -160,15 +162,15 @@ clean-libs:
 	${MAKE} -C libs/test clean
 
 clean: clean-libs support-clean testenv-clean
-	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
+	-${BOOTSTRAP_IDRIS} --clean ${IDRIS2_APP_IPKG}
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
-	$(RM) -r build
+	$(RM) -r build/exec build/ttc
 
 install: install-idris2 install-support install-libs
 
 install-api: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
+	${BOOTSTRAP_IDRIS} --install ${IDRIS2_LIB_IPKG}
 
 install-with-src-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG}
@@ -198,18 +200,18 @@ install-support:
 	@${MAKE} -C support/chez install
 
 install-libs:
-	${MAKE} -C libs/prelude install IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/base install    IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/contrib install IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/network install IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/test  install   IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/prelude install IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/base install    IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/contrib install IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/network install IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/test  install   IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
 
 install-with-src-libs:
-	${MAKE} -C libs/prelude install-with-src IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/base install-with-src    IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/contrib install-with-src IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/network install-with-src IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/test install-with-src    IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/prelude install-with-src IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/base install-with-src    IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/contrib install-with-src IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/network install-with-src IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+	${MAKE} -C libs/test install-with-src    IDRIS2=$(TARGET) IDRIS2_PATH=${LOCAL_IDRIS2_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
 
 install-libdocs: libdocs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/prelude
@@ -229,34 +231,35 @@ install-libdocs: libdocs
 
 # Bootstrapping using SCHEME
 bootstrap: support
-	mkdir -p bootstrap-build/idris2_app
-	cp support/c/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
-	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
+	mkdir -p $(BOOTSTRAP_IDRIS_PREFIX)/idris2_app
+	cp support/c/${IDRIS2_SUPPORT} $(BOOTSTRAP_IDRIS_PREFIX)/idris2_app/
+	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${BOOTSTRAP_IDRIS_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.ss \
-		> bootstrap-build/idris2_app/idris2-boot.ss
+		> $(BOOTSTRAP_IDRIS_PREFIX)/idris2_app/idris2-boot.ss
 	$(SHELL) ./bootstrap-stage1-chez.sh
-	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
+	IDRIS2_CG="chez" MAKE=$(MAKE) $(SHELL) ./bootstrap-stage2.sh
 
 # Bootstrapping using racket
 bootstrap-racket: support
-	mkdir -p bootstrap-build/idris2_app
-	cp support/c/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
-	sed 's|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
+	mkdir -p $(BOOTSTRAP_IDRIS_PREFIX)/idris2_app
+	cp support/c/${IDRIS2_SUPPORT} $(BOOTSTRAP_IDRIS_PREFIX)/idris2_app/
+	sed 's|__PREFIX__|${BOOTSTRAP_IDRIS_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.rkt \
-		> bootstrap-build/idris2_app/idris2-boot.rkt
+		> $(BOOTSTRAP_IDRIS_PREFIX)/idris2_app/idris2-boot.rkt
 	$(SHELL) ./bootstrap-stage1-racket.sh
-	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
+	IDRIS2_CG="racket" MAKE=$(MAKE) $(SHELL) ./bootstrap-stage2.sh
 
 bootstrap-test:
-	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
+	$(MAKE) test INTERACTIVE='' IDRIS2=$(IDRIS2) IDRIS2_PREFIX=${BOOTSTRAP_IDRIS_PREFIX}
 
 bootstrap-clean:
-	$(RM) -r bootstrap-build
+	$(RM) -r $(BOOTSTRAP_IDRIS_PREFIX)
 
 
 .PHONY: distclean
 
 distclean: clean bootstrap-clean
+	$(RM) -r build/
 	@find . -type f -name '*.ttc' -exec rm -f {} \;
 	@find . -type f -name '*.ttm' -exec rm -f {} \;
 	@find . -type f -name '*.ibc' -exec rm -f {} \;

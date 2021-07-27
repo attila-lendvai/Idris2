@@ -71,10 +71,11 @@ If all is well, to install, type:
 
 ### 3: Installing with an existing Idris 2
 
-If you have the latest *released* version of Idris 2
-(0.4.0 at the time of writing) installed:
+If you have the latest *released* version of Idris 2 (0.4.0 at the
+time of writing) installed, then you can omit the variable as it
+defaults to `idris2` in the path:
 
-- `make all`
+- `make all BOOTSTRAP_IDRIS=/path/to/idris2-v0.4.0-binary`
 - `make install`
 
 ### 4: (Optional) Installing Idris 2 library documentation
