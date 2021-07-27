@@ -71,8 +71,8 @@ If all is well, to install, type:
 
 If you have an earlier version of Idris 2 (minimum version 0.2.2) installed:
 
-- `make all`
-- `make install`
+- `make all BOOTSTRAP_IDRIS=/path/to/idris2-v0.2.2-binary`
+- `make install BOOTSTRAP_IDRIS=/path/to/idris2-v0.2.2-binary`
 
 ### 4: (Optional) Self-hosting step
 

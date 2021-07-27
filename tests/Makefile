@@ -2,11 +2,11 @@ INTERACTIVE ?= --interactive
 
 .PHONY: testbin test
 
-test:
+test: testbin
 	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --only $(only)
 
 testbin:
-	${IDRIS2_BOOT} --build tests.ipkg
+	$(BOOTSTRAP_IDRIS) --build tests.ipkg
 
 clean:
 	$(RM) -r build
