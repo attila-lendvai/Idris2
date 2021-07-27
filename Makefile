@@ -1,3 +1,6 @@
+PREVIOUS_STAGE	= idris.1
+HOST_DIR	= build/$(PREVIOUS_STAGE)
+
 include config.mk
 
 # current Idris2 version components
@@ -24,21 +27,22 @@ export IDRIS2_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/li
 export IDRIS2_LIBS = ${IDRIS2_CURDIR}/libs/network
 export IDRIS2_DATA = ${IDRIS2_CURDIR}/support
 
-IDRIS_VERSION := $(shell idris --version)
-VALID_IDRIS_VERSION_REGEXP = "1.3.[2-9].*"
-
 -include custom.mk
 
 .PHONY: ttimp idris2boot idris2-fromc prelude test base clean lib_clean check_version idris2c dist/idris2.c
 
-all: idris2boot libs install-support test
+all: idris2boot libs install-support
 
 # test requires an Idris install! Maybe we should do a version in Idris2?
 all-fromc: idris2-fromc libs
 
 check_version:
-	@echo "Using Idris 1 version: $(IDRIS_VERSION)"
-	@if [ $(shell expr $(IDRIS_VERSION) : $(VALID_IDRIS_VERSION_REGEXP)) -eq 0 ]; then echo "Wrong idris version, expected version matching $(VALID_IDRIS_VERSION_REGEXP)"; exit 1; fi
+	@if [ ! -x $(BOOTSTRAP_IDRIS) ]; then echo "No executable binary at '$(BOOTSTRAP_IDRIS)'; see variable BOOTSTRAP_IDRIS"; exit 1; fi
+	@VALID_BOOTSTRAP_IDRIS_VERSION_REGEXP="1.3.[2-9].*"					; \
+	BOOTSTRAP_IDRIS_VERSION=`$(BOOTSTRAP_IDRIS) --version`					; \
+	echo "Bootstrap Idris is '$(BOOTSTRAP_IDRIS)', version: '$${BOOTSTRAP_IDRIS_VERSION}'"	; \
+	expr $${BOOTSTRAP_IDRIS_VERSION} : $${VALID_BOOTSTRAP_IDRIS_VERSION_REGEXP} >/dev/null		; \
+	if [ $$? -eq 1 ]; then echo "Wrong idris version, expected version matching $${VALID_BOOTSTRAP_IDRIS_VERSION_REGEXP}"; exit 1; fi
 
 idris2boot: dist/idris2.c idris2-fromc
 
@@ -52,59 +56,59 @@ ifeq ($(OS), darwin)
 else
 	@sed -i '1 s|^.*$$|char* idris2_prefix = "${PREFIX}";|' dist/idris2.c
 endif
-	${MAKE} -C dist
+	$(MAKE) -C dist
 	@cp dist/idris2 ./idris2boot
 
 # bit of a hack here, to get the prefix into the generated C!
-dist/idris2.c: src/YafflePaths.idr check_version
+dist/idris2.c: $(BOOTSTRAP_IDRIS) src/YafflePaths.idr check_version
 	@echo "Building Idris 2 version: $(IDRIS2_VERSION_TAG)"
-	idris --build idris2.ipkg
+	$(BOOTSTRAP_IDRIS) --build idris2.ipkg
 	@echo 'char* idris2_prefix = "${PREFIX}";' > idris2_prefix.c
 	@echo 'char* getIdris2_prefix() { return idris2_prefix; }' >> idris2_prefix.c
 	@cat idris2_prefix.c idris2.c dist/rts/idris_main.c > dist/idris2.c
 	@rm -f idris2.c idris2_prefix.c
 
 idris2c: dist/idris2.c
-	${MAKE} -C dist
+	$(MAKE) -C dist
 
 src/YafflePaths.idr:
 	echo 'module YafflePaths; export yversion : ((Nat,Nat,Nat), String); yversion = ((${MAJOR},${MINOR},${PATCH}), "${GIT_SHA1}")' > src/YafflePaths.idr
 
 prelude:
-	${MAKE} -C libs/prelude IDRIS2=../../idris2boot
+	$(MAKE) -C libs/prelude IDRIS2=../../idris2boot
 
 base: prelude
-	${MAKE} -C libs/base IDRIS2=../../idris2boot
+	$(MAKE) -C libs/base IDRIS2=../../idris2boot
 
 network: prelude
-	${MAKE} -C libs/network IDRIS2=../../idris2boot
-	${MAKE} -C libs/network test IDRIS2=../../idris2boot
+	$(MAKE) -C libs/network IDRIS2=../../idris2boot
+	$(MAKE) -C libs/network test IDRIS2=../../idris2boot
 
 contrib: prelude
-	${MAKE} -C libs/contrib IDRIS2=../../idris2boot
+	$(MAKE) -C libs/contrib IDRIS2=../../idris2boot
 
 libs : prelude base network contrib
 
 clean: clean-libs
-	${MAKE} -C src clean
-	${MAKE} -C tests clean
-	${MAKE} -C dist clean
-	${MAKE} -C support/c clean
+	$(MAKE) -C src clean
+	$(MAKE) -C tests clean
+	$(MAKE) -C dist clean
+	$(MAKE) -C support/c clean
 	rm -f runtests
 	rm -f idris2 dist/idris2.c
 
 clean-libs:
-	${MAKE} -C libs/prelude clean
-	${MAKE} -C libs/base clean
-	${MAKE} -C libs/network clean
-	${MAKE} -C libs/contrib clean
+	$(MAKE) -C libs/prelude clean
+	$(MAKE) -C libs/base clean
+	$(MAKE) -C libs/network clean
+	$(MAKE) -C libs/contrib clean
 
-test:
-	idris --build tests.ipkg
-	@${MAKE} -C tests only=$(only)
+test: $(BOOTSTRAP_IDRIS)
+	$(BOOTSTRAP_IDRIS) --build tests.ipkg
+	@$(MAKE) -C tests only=$(only)
 
 support:
-	@${MAKE} -C support/c
+	@$(MAKE) -C support/c
 
 install-all: install-exec install-support install-libs
 
@@ -119,7 +123,7 @@ install-support: support
 	install support/chez/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
 	install support/racket/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
 	install support/gambit/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
-	@${MAKE} -C support/c install
+	@$(MAKE) -C support/c install
 
 install-exec:
 	mkdir -p ${PREFIX}/bin
@@ -127,7 +131,15 @@ install-exec:
 	install idris2boot ${PREFIX}/bin
 
 install-libs: libs
-	${MAKE} -C libs/prelude install IDRIS2=../../idris2boot
-	${MAKE} -C libs/base install IDRIS2=../../idris2boot
-	${MAKE} -C libs/network install IDRIS2=../../idris2boot IDRIS2_VERSION=${IDRIS2_VERSION}
-	${MAKE} -C libs/contrib install IDRIS2=../../idris2boot
+	$(MAKE) -C libs/prelude install IDRIS2=../../idris2boot
+	$(MAKE) -C libs/base install IDRIS2=../../idris2boot
+	$(MAKE) -C libs/network install IDRIS2=../../idris2boot IDRIS2_VERSION=${IDRIS2_VERSION}
+	$(MAKE) -C libs/contrib install IDRIS2=../../idris2boot
+
+.PHONY: distclean
+
+distclean: clean
+	$(RM) -r build/
+	@find . -type f -name '*.ttc' -exec rm -f {} \;
+	@find . -type f -name '*.ttm' -exec rm -f {} \;
+	@find . -type f -name '*.ibc' -exec rm -f {} \;
