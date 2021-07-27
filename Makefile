@@ -1,7 +1,10 @@
 include config.mk
 
+PREVIOUS_STAGE	= idris.6
+HOST_DIR	= build/$(PREVIOUS_STAGE)
+
 # Idris 2 executable used to bootstrap
-export IDRIS2_BOOT ?= idris2
+export IDRIS2_BOOT ?= $(HOST_DIR)/build/exec/idris2
 
 # Idris 2 executable we're building
 NAME = idris2
@@ -59,7 +62,7 @@ all: support ${TARGET} libs
 
 idris2-exec: ${TARGET}
 
-${TARGET}: src/IdrisPaths.idr
+${TARGET}: $(IDRIS2_BOOT) src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
@@ -137,7 +140,6 @@ retest: testenv
 	@echo
 	@${MAKE} -C tests retest only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
 
-
 support:
 	@${MAKE} -C support/c
 	@${MAKE} -C support/refc
@@ -159,17 +161,17 @@ clean: clean-libs support-clean testenv-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
-	$(RM) -r build
+	$(RM) -r build/exec build/ttc
 
 install: install-idris2 install-support install-libs
 
-install-api: src/IdrisPaths.idr
+install-api: $(IDRIS2_BOOT) src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
 
 install-with-src-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG}
 
-install-idris2:
+install-idris2: ${TARGET} support libs
 	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
 ifeq ($(OS), windows)
@@ -180,7 +182,7 @@ endif
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
-install-support:
+install-support: support
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
@@ -193,7 +195,7 @@ install-support:
 	@${MAKE} -C support/refc install
 	@${MAKE} -C support/chez install
 
-install-libs:
+install-libs: libs
 	${MAKE} -C libs/prelude install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/base install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
@@ -206,6 +208,17 @@ install-with-src-libs:
 	${MAKE} -C libs/contrib install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/network install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/test install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+
+$(HOST_DIR)/build/exec/idris2:
+	echo Building $@
+	@mkdir -p build
+# after cloning, we must create the local branches ourselves; the issue in detail: https://stackoverflow.com/questions/40310932/git-hub-clone-all-branches-at-once
+	@git show-ref --verify --quiet refs/heads/$(PREVIOUS_STAGE) || git branch --quiet --track $(PREVIOUS_STAGE) remotes/origin/$(PREVIOUS_STAGE)
+	test -d build/$(PREVIOUS_STAGE) || git worktree add --detach --force build/$(PREVIOUS_STAGE) $(PREVIOUS_STAGE)
+# a git checkout doesn't do anything to file modification times, so we just touch everything that happens to be checked in under build/ to avoid unnecessary rebuilds
+# TODO clarify if/where this is needed
+#	-find build/$(PREVIOUS_STAGE)/build -type f -exec touch {} \;
+	nix-shell --pure --keep NIX_PATH --command "$(MAKE) --directory=build/$(PREVIOUS_STAGE) $(PREVIOUS_STAGE_EXTRA_TARGETS) install" build/$(PREVIOUS_STAGE)/default.nix
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 
@@ -239,6 +252,7 @@ bootstrap-clean:
 .PHONY: distclean
 
 distclean: clean bootstrap-clean
+	$(RM) -r build/
 	@find . -type f -name '*.ttc' -exec rm -f {} \;
 	@find . -type f -name '*.ttm' -exec rm -f {} \;
 	@find . -type f -name '*.ibc' -exec rm -f {} \;
