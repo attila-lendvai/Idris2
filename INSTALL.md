@@ -67,15 +67,11 @@ If all is well, to install, type:
 
 ### (Alternative 2: Installing with an existing Idris 2)
 
-If you have [Idris-2-in-Idris-1](https://github.com/edwinb/Idris2-boot)
-installed:
+If you have the latest *released* version of Idris 2 (0.2.1 at the
+time of writing) installed, then you can omit the variable as it
+defaults to `idris2` in the path:
 
-- `make all IDRIS2_BOOT=idris2boot`
-- `make install IDRIS2_BOOT=idris2boot`
-
-If you have an earlier version of this Idris 2 installer
-
-- `make all`
+- `make all BOOTSTRAP_IDRIS=/path/to/idris2-v0.2.1-binary`
 - `make install`
 
 ### 3: (Optional) Self-hosting step
