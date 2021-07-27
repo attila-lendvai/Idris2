@@ -25,7 +25,7 @@ cd ..
 PREFIX=${PWD}/bootstrap
 
 if [ ${OS} = "windows" ]; then
-    # IDRIS_PREFIX is only used to build IDRIS2_BOOT_PATH
+    # IDRIS_PREFIX is only used to build BOOTSTRAP_IDRIS_PATH
     IDRIS_PREFIX=$(cygpath -m $PREFIX)
     SEP=";"
 else
@@ -34,7 +34,7 @@ else
 fi
 
 BOOT_PATH_BASE=${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}
-IDRIS2_BOOT_PATH="${BOOT_PATH_BASE}/prelude${SEP}${BOOT_PATH_BASE}/base${SEP}${BOOT_PATH_BASE}/contrib${SEP}${BOOT_PATH_BASE}/network"
+BOOTSTRAP_IDRIS_PATH="${BOOT_PATH_BASE}/prelude${SEP}${BOOT_PATH_BASE}/base${SEP}${BOOT_PATH_BASE}/contrib${SEP}${BOOT_PATH_BASE}/network"
 
 # Now rebuild everything properly
 # PREFIX must be the "clean" build root, without cygpath -m
@@ -43,5 +43,5 @@ echo ${PREFIX}
 DYLIB_PATH="${PREFIX}/lib"
 ${MAKE} libs IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
 ${MAKE} install IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
-${MAKE} clean IDRIS2_BOOT=${PREFIX}/bin/idris2 LD_LIBRARY_PATH=${DYLIB_PATH}
-${MAKE} all IDRIS2_BOOT=${PREFIX}/bin/idris2 IDRIS2_CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH} LD_LIBRARY_PATH=${DYLIB_PATH}
+${MAKE} clean BOOTSTRAP_IDRIS_PATH=${PREFIX}/bin/idris2 LD_LIBRARY_PATH=${DYLIB_PATH}
+${MAKE} all BOOTSTRAP_IDRIS=${PREFIX}/bin/idris2 IDRIS2_CG=racket IDRIS2_PATH=${BOOTSTRAP_IDRIS_PATH} LD_LIBRARY_PATH=${DYLIB_PATH}
