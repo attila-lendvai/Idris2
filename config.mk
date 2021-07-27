@@ -3,6 +3,8 @@
 # Where to install idris2 binaries and libraries (must be an absolute path)
 PREFIX ?= $(HOME)/.idris2
 
+BOOTSTRAP_IDRIS ?= idris2
+
 # For Windows targets. Set to 1 to support Windows 7.
 OLD_WIN ?= 0
 
@@ -38,13 +40,6 @@ else
 	CFLAGS += -fPIC
 endif
 export OS
-
-ifeq ($(OS),bsd)
-	MAKE := gmake
-else
-	MAKE := make
-endif
-export MAKE
 
 # Add a custom.mk file to override any of the configurations
 -include custom.mk
