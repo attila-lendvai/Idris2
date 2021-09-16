@@ -5,17 +5,21 @@
 
 *.dSYM
 
-/idris2boot
-/runtests
+build/
+runtests
 
-/dist/idris2.c
+dist/idris2.c
 
-/docs/build/
+docs/build/
 
-/libs/**/build
-/tests/**/output
-/tests/**/*.so
-/tests/**/*.dylib
-/tests/**/*.dll
+libs/**/build
+tests/**/output
+tests/**/*.so
+tests/**/*.dylib
+tests/**/*.dll
+support/**/*.o
+support/**/*.a
+support/**/*.d
 
-/src/YafflePaths.idr
+src/YafflePaths.idr
+src/IdrisPaths.idr
