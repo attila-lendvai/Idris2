@@ -1,7 +1,14 @@
-PREVIOUS_STAGE	= idris.1
-HOST_DIR	= build/$(PREVIOUS_STAGE)
-
 include config.mk
+
+# Idris 2 executable we're building
+NAME = idris2
+TARGETDIR = ${CURDIR}/dist/
+TARGET = ${TARGETDIR}/${NAME}
+
+# This is only considered when running the tests, because it doesn't
+# make sense to override the Idris binary in the other targets that
+# generate build artifacts.
+IDRIS2 ?= $(realpath $(TARGET))
 
 # current Idris2 version components
 MAJOR=0
@@ -59,7 +66,7 @@ endif
 	$(MAKE) -C dist
 
 # bit of a hack here, to get the prefix into the generated C!
-dist/idris2.c: $(BOOTSTRAP_IDRIS) src/YafflePaths.idr check_version
+dist/idris2.c: src/YafflePaths.idr check_version
 	@echo "Building Idris 2 version: $(IDRIS2_VERSION_TAG)"
 	$(BOOTSTRAP_IDRIS) --build idris2.ipkg
 	@echo 'char* idris2_prefix = "${PREFIX}";' > idris2_prefix.c
@@ -74,17 +81,17 @@ src/YafflePaths.idr:
 	echo 'module YafflePaths; export yversion : ((Nat,Nat,Nat), String); yversion = ((${MAJOR},${MINOR},${PATCH}), "${GIT_SHA1}")' > src/YafflePaths.idr
 
 prelude:
-	$(MAKE) -C libs/prelude IDRIS2=../../dist/idris2
+	$(MAKE) -C libs/prelude IDRIS2=$(IDRIS2)
 
 base: prelude
-	$(MAKE) -C libs/base IDRIS2=../../dist/idris2
+	$(MAKE) -C libs/base IDRIS2=$(IDRIS2)
 
 network: prelude
-	$(MAKE) -C libs/network IDRIS2=../../dist/idris2
-	$(MAKE) -C libs/network test IDRIS2=../../dist/idris2
+	$(MAKE) -C libs/network IDRIS2=$(IDRIS2)
+	$(MAKE) -C libs/network test IDRIS2=$(IDRIS2)
 
 contrib: prelude
-	$(MAKE) -C libs/contrib IDRIS2=../../dist/idris2
+	$(MAKE) -C libs/contrib IDRIS2=$(IDRIS2)
 
 libs : prelude base network contrib
 
@@ -102,20 +109,18 @@ clean-libs:
 	$(MAKE) -C libs/network clean
 	$(MAKE) -C libs/contrib clean
 
-test: $(BOOTSTRAP_IDRIS)
+test:
 	$(BOOTSTRAP_IDRIS) --build tests.ipkg
-	@$(MAKE) -C tests only=$(only)
+	$(MAKE) -C tests only=$(only) IDRIS2=$(IDRIS2)
 
 support:
 	@$(MAKE) -C support/c
 
-install-all: install-exec install-support install-libs
+install: install-exec install-support install-libs
 
-install: all install-all
+install-fromc: all-fromc install
 
-install-fromc: all-fromc install-all
-
-install-support: support
+install-support:
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
@@ -129,11 +134,11 @@ install-exec:
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
 	install dist/idris2 ${PREFIX}/bin
 
-install-libs: libs
-	$(MAKE) -C libs/prelude install IDRIS2=../../dist/idris2
-	$(MAKE) -C libs/base install IDRIS2=../../dist/idris2
-	$(MAKE) -C libs/network install IDRIS2=../../dist/idris2 IDRIS2_VERSION=${IDRIS2_VERSION}
-	$(MAKE) -C libs/contrib install IDRIS2=../../dist/idris2
+install-libs:
+	$(MAKE) -C libs/prelude install IDRIS2=$(IDRIS2)
+	$(MAKE) -C libs/base install    IDRIS2=$(IDRIS2)
+	$(MAKE) -C libs/network install IDRIS2=$(IDRIS2) IDRIS2_VERSION=${IDRIS2_VERSION}
+	$(MAKE) -C libs/contrib install IDRIS2=$(IDRIS2)
 
 .PHONY: distclean
 

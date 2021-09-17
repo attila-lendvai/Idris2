@@ -1,8 +1,8 @@
-IDRIS2 = ../../../dist/idris2
+IDRIS2 ?= ../../../dist/idris2
 INTERACTIVE ?= --interactive
 
 test:
-	@../runtests $(IDRIS2) $(INTERACTIVE) --only $(only)
+	../runtests $(IDRIS2) $(INTERACTIVE) --only $(only)
 
 clean:
 	find . -name '*.ibc'  | xargs rm -f

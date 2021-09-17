@@ -3,7 +3,7 @@
 PREFIX ?= $(HOME)/.idris2
 
 # Idris 1 executable that is used for bootstrapping us
-BOOTSTRAP_IDRIS ?= $(HOST_DIR)/dist/build/idris/idris
+BOOTSTRAP_IDRIS ?= idris-1.3.4
 
 # Add any optimisation/profiling flags for C here (e.g. -O2)
 CFLAGS := -Wall $(CFLAGS)
@@ -12,6 +12,11 @@ CFLAGS := -Wall $(CFLAGS)
 CC ?= clang
 
 ##################################################################
+
+# Make sure it's an absolute path. The 'override' is needed for the case when
+# it's specified as `make BOOTSTRAP_IDRIS=foo bootstrap`, e.g. as in the nix
+# build.
+override BOOTSTRAP_IDRIS := $(shell command -v $(BOOTSTRAP_IDRIS) 2>/dev/null)
 
 RANLIB ?= ranlib
 AR ?= ar
