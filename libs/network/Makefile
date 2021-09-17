@@ -32,12 +32,8 @@ $(TARGET)$(SHLIB_SUFFIX): $(OBJS)
 .PHONY: clean
 
 clean :
-	rm -f $(OBJS) $(TARGET)$(SHLIB_SUFFIX)
+	rm -f $(OBJS) $(TARGET)$(SHLIB_SUFFIX) $(DEPS)
 	rm -rf build
-
-cleandep: clean
-	rm -f $(DEPS)
-
 
 .PHONY: install
 

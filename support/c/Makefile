@@ -35,11 +35,7 @@ $(DYLIBTARGET): $(OBJS)
 .PHONY: clean
 
 clean:
-	rm -f $(OBJS) $(DYLIBTARGET) $(LIBTARGET)
-
-cleandep: clean
-	rm -f $(DEPS)
-
+	rm -f $(OBJS) $(DYLIBTARGET) $(LIBTARGET) $(DEPS)
 
 .PHONY: install
 
