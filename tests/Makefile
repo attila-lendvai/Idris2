@@ -1,4 +1,4 @@
-IDRIS2 = ../../../idris2boot
+IDRIS2 = ../../../dist/idris2
 INTERACTIVE ?= --interactive
 
 test:

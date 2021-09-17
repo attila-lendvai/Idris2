@@ -1,6 +1,6 @@
 ##### Options which a user might set before building go here #####
 
-PREFIX ?= $(HOME)/.idris2boot
+PREFIX ?= $(HOME)/.idris2
 
 # Idris 1 executable that is used for bootstrapping us
 BOOTSTRAP_IDRIS ?= $(HOST_DIR)/dist/build/idris/idris
