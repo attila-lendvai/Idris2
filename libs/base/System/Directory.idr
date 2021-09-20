@@ -35,10 +35,10 @@ prim_changeDir : String -> PrimIO Int
 %foreign support "idris2_createDir"
 prim_createDir : String -> PrimIO Int
 
-%foreign support "idris2_dirOpen"
+%foreign support "idris2_openDir"
 prim_openDir : String -> PrimIO DirPtr
 
-%foreign support "idris2_dirClose"
+%foreign support "idris2_closeDir"
 prim_closeDir : DirPtr -> PrimIO ()
 
 %foreign support "idris2_nextDirEntry"

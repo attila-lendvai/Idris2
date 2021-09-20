@@ -29,7 +29,7 @@ typedef struct {
     int error;
 } DirInfo;
 
-void* idris2_dirOpen(char* dir) {
+void* idris2_openDir(char* dir) {
     DIR *d = opendir(dir);
     if (d == NULL) {
         return NULL;
@@ -42,7 +42,7 @@ void* idris2_dirOpen(char* dir) {
     }
 }
 
-void idris2_dirClose(void* d) {
+void idris2_closeDir(void* d) {
     DirInfo* di = (DirInfo*)d;
 
     closedir(di->dirptr);
@@ -60,5 +60,3 @@ char* idris2_nextDirEntry(void* d) {
         return de->d_name;
     }
 }
-
-

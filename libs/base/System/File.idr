@@ -39,7 +39,7 @@ prim__eof : FilePtr -> PrimIO Int
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileRemove"
+%foreign support "idris2_removeFile"
 prim__fileRemove : String -> PrimIO Int
 %foreign support "idris2_fileSize"
 prim__fileSize : FilePtr -> PrimIO Int
