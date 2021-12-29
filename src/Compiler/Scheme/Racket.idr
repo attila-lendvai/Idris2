@@ -332,21 +332,7 @@ getFgnCall : {auto f : Ref Done (List String) } ->
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
 startRacket : String -> String -> String -> String
-startRacket racket appdir target = """
-  #!/bin/sh
-  # \{ generatedString "Racket" }
-
-  set -e # exit on any error
-
-  if [ "$(uname)" = Darwin ]; then
-    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
-  else
-    DIR=$(dirname "$(readlink -f -- "$0")")
-  fi
-
-  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
-  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
-
+startRacket racket appdir target = (startSchemePreamble appdir "Racket") ++ """
   \{ racket } "$DIR/\{ target }" "$@"
   """
 
